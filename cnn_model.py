@@ -60,6 +60,9 @@ class ThaiCNNPredictor:
         self.model = ThaiCNN(num_classes=len(self.classes))
         self.model.load_state_dict(checkpoint["model_state_dict"])
         self.model.eval()
+        # Memory & thread optimization for cloud environments (Render / 512MB RAM)
+        torch.set_num_threads(2)
+        torch.set_grad_enabled(False)
 
     def predict(self, image):
         if image is None:

@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import os
 import gradio as gr
 import numpy as np
 import torch
@@ -46,32 +46,34 @@ def predict_sketch_or_image(image):
 
 
 # ============================================================
-# Gradio Application with Dual Input (Formal & Academic)
+# Gradio Application (Render Ready, Dual Mode, Formal)
 # ============================================================
 
 with gr.Blocks(title="Thai Character Classifier (ก - ฮ)", theme=gr.themes.Soft()) as app:
     gr.Markdown("# Thai Character Classification System")
     gr.Markdown(
         "ระบบจำแนกพยัญชนะภาษาไทย 44 รูป (ก - ฮ) ด้วยโครงข่ายประสาทเทียมสังวัตนาการ (Deep Convolutional Neural Network)\n"
-        "Data Science Capstone Project | ทดสอบได้ทั้งลายมือเขียนสดบนกระดานดิจิทัลและไฟล์ภาพ"
+        "Data Science Capstone Project | รองรับทั้งไฟล์ภาพและลายมือเขียนดิจิทัล"
     )
 
     with gr.Row():
         with gr.Column(scale=1):
             with gr.Tabs():
-                with gr.TabItem("วาดเขียนด้วยลายมือ (Drawing Canvas)"):
-                    input_sketch = gr.Sketchpad(
-                        type="numpy",
-                        label="วาดพยัญชนะไทยด้วยลายมือ (Draw Thai Character)"
-                    )
-                    sketch_btn = gr.Button("วิเคราะห์ภาพที่วาด (Predict Drawing)", variant="primary", size="lg")
-
+                # Tab 1: Primary (Upload)
                 with gr.TabItem("อัปโหลดรูปภาพ (Upload Image)"):
                     input_upload = gr.Image(
                         type="numpy",
                         label="อัปโหลดรูปภาพพยัญชนะไทย (Upload Image)"
                     )
                     upload_btn = gr.Button("วิเคราะห์ภาพที่อัปโหลด (Predict)", variant="primary", size="lg")
+
+                # Tab 2: Secondary (Draw)
+                with gr.TabItem("วาดเขียนด้วยลายมือ (Drawing Canvas)"):
+                    input_sketch = gr.Sketchpad(
+                        type="numpy",
+                        label="วาดพยัญชนะไทยด้วยลายมือ (Draw Thai Character)"
+                    )
+                    sketch_btn = gr.Button("วิเคราะห์ภาพที่วาด (Predict Drawing)", variant="primary", size="lg")
 
         with gr.Column(scale=1):
             output_label = gr.Label(
@@ -104,4 +106,11 @@ with gr.Blocks(title="Thai Character Classifier (ก - ฮ)", theme=gr.themes.So
 
 
 if __name__ == "__main__":
-    app.launch(share=False)
+    # Render binds port through $PORT environment variable (default 7860 locally)
+    port = int(os.environ.get("PORT", 7860))
+    print(f"Starting Gradio web service on 0.0.0.0:{port} ...")
+    app.launch(
+        server_name="0.0.0.0",
+        server_port=port,
+        share=False,
+    )
