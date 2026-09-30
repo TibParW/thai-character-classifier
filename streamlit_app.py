@@ -19,17 +19,17 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom CSS for clean Gradio-like interface
+# Custom CSS for clean interface
 st.markdown(
     """
     <style>
     .block-container {
         max-width: 1050px;
-        padding-top: 1.8rem;
+        padding-top: 1.5rem;
         padding-bottom: 3rem;
     }
     .app-title {
-        font-size: 2.1rem;
+        font-size: 2.2rem;
         font-weight: 700;
         text-align: center;
         margin-bottom: 0.3rem;
@@ -43,12 +43,12 @@ st.markdown(
         line-height: 1.5;
     }
     .card-title {
-        font-size: 0.88rem;
-        font-weight: 600;
+        font-size: 0.92rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #374151;
-        margin-bottom: 0.6rem;
+        color: #1f2937;
+        margin-bottom: 0.75rem;
     }
     .gradio-card {
         background-color: #ffffff;
@@ -64,7 +64,7 @@ st.markdown(
     .label-header {
         display: flex;
         justify-content: space-between;
-        font-size: 0.9rem;
+        font-size: 0.92rem;
         font-weight: 500;
         margin-bottom: 0.25rem;
         color: #1f2937;
@@ -72,19 +72,13 @@ st.markdown(
     .bar-bg {
         background-color: #f3f4f6;
         border-radius: 9999px;
-        height: 12px;
+        height: 13px;
         overflow: hidden;
     }
     .bar-fill {
         height: 100%;
         border-radius: 9999px;
         transition: width 0.4s ease-in-out;
-    }
-    .canvas-container-box {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin-bottom: 0.5rem;
     }
     </style>
     """,
@@ -110,8 +104,8 @@ predictor = load_predictor()
 st.markdown('<div class="app-title">Thai Character Classifier (ก - ฮ)</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="app-desc">'
-    'ทดสอบจำแนกพยัญชนะไทย 44 ตัว ทั้งจาก<b>การอัปโหลดไฟล์ภาพ</b> หรือ<b>วาดเขียนด้วยลายมือสด ๆ</b><br>'
-    'ขับเคลื่อนด้วยโมเดล Deep CNN (ความแม่นยำ 99.14% ฝึกสอนจากชุดข้อมูล 22,000 ตัวอย่าง)'
+    'ทดสอบจำแนกพยัญชนะไทย 44 ตัว ทั้งจาก<b>การวาดเขียนด้วยลายมือสด ๆ</b> หรือ<b>การอัปโหลดไฟล์ภาพ</b><br>'
+    'ขับเคลื่อนด้วยโมเดล Deep CNN (ความแม่นยำ 99.14% จากชุดข้อมูล 22,000 ตัวอย่าง)'
     '</div>',
     unsafe_allow_html=True,
 )
@@ -123,8 +117,6 @@ st.markdown(
 
 if "current_image" not in st.session_state:
     st.session_state.current_image = None
-if "input_source" not in st.session_state:
-    st.session_state.input_source = "upload"
 
 
 # Load Examples
@@ -138,21 +130,58 @@ if TEST_IMAGES_DIR.exists():
 
 
 # ============================================================
-# 2-Column Interface
+# 2-Column Interface (Left: Input / Right: Output)
 # ============================================================
 
 col_input, col_output = st.columns([1, 1], gap="large")
 
+active_image = None
+
 # ----------------- LEFT: INPUT PANEL -----------------
 with col_input:
-    st.markdown('<div class="card-title">เลือกวิธีป้อนข้อมูล (Input Method)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">1. เลือกวิธีป้อนข้อมูล (Input Method)</div>', unsafe_allow_html=True)
     
-    tab_upload, tab_draw = st.tabs(["📁 อัปโหลดรูปภาพ (Upload)", "✏️ วาดเขียนด้วยลายมือ (Draw Canvas)"])
+    # Prominent Radio Button - Default to DRAWING CANVAS
+    input_mode = st.radio(
+        "โหมดการทดสอบ:",
+        ["✏️ วาดเขียนด้วยลายมือ (Drawing Canvas)", "📁 อัปโหลดไฟล์รูปภาพ (Upload Image)"],
+        horizontal=True,
+        label_visibility="collapsed",
+    )
 
-    active_image = None
+    if input_mode == "✏️ วาดเขียนด้วยลายมือ (Drawing Canvas)":
+        st.write("🖌️ **กระดานวาดตัวอักษร:** ใช้เมาส์หรือนิ้วมือวาดพยัญชนะไทยลงในกรอบด้านล่าง:")
+        
+        col_stroke, col_clear = st.columns([2, 1])
+        with col_stroke:
+            stroke_width = st.slider("ขนาดเส้นดินสอ (Stroke):", min_value=8, max_value=24, value=14, step=2)
+        with col_clear:
+            st.write("")
+            st.caption("*(ดับเบิ้ลคลิกถังขยะในเครื่องมือ เพื่อล้างกระดาน)*")
 
-    # TAB 1: FILE UPLOAD
-    with tab_upload:
+        # Interactive Canvas
+        canvas_result = st_canvas(
+            fill_color="rgba(255, 255, 255, 0)",
+            stroke_width=stroke_width,
+            stroke_color="#000000",
+            background_color="#FFFFFF",
+            height=280,
+            width=280,
+            drawing_mode="freedraw",
+            key="thai_drawing_canvas",
+        )
+
+        # Check if user has drawn something
+        if canvas_result.image_data is not None:
+            rgb = canvas_result.image_data[:, :, :3]
+            # Check if there are non-white pixels
+            if np.any(rgb < 200):
+                active_image = Image.fromarray(rgb.astype(np.uint8))
+                st.success("✅ ได้รับภาพวาดเรียบร้อย กำลังวิเคราะห์ผล...")
+
+    else:
+        # File Upload Mode
+        st.write("📁 **อัปโหลดภาพ:** เลือกรูปภาพพยัญชนะไทยจากเครื่องหรือ Desktop:")
         uploaded_file = st.file_uploader(
             "เลือกไฟล์รูปภาพ (JPG, PNG)",
             type=["jpg", "jpeg", "png"],
@@ -162,39 +191,15 @@ with col_input:
             active_image = Image.open(uploaded_file)
             st.image(active_image, caption=f"ภาพที่อัปโหลด: {uploaded_file.name}", use_container_width=True)
 
-    # TAB 2: DRAWING CANVAS
-    with tab_draw:
-        st.caption("✍️ ใช้เมาส์หรือนิ้วมือวาดพยัญชนะไทยลงในช่องสี่เหลี่ยมด้านล่าง:")
-        
-        stroke_width = st.slider("ขนาดเส้นปากกา (Stroke Width):", min_value=8, max_value=24, value=14, step=2)
-
-        canvas_result = st_canvas(
-            fill_color="rgba(255, 255, 255, 0)",
-            stroke_width=stroke_width,
-            stroke_color="#000000",
-            background_color="#FFFFFF",
-            height=280,
-            width=280,
-            drawing_mode="freedraw",
-            key="canvas_component",
-        )
-
-        # Check if user has drawn something on the canvas
-        if canvas_result.image_data is not None:
-            # Check for non-white pixels (drawn black strokes)
-            rgb = canvas_result.image_data[:, :, :3]
-            if np.any(rgb < 200):
-                active_image = Image.fromarray(rgb.astype(np.uint8))
-                st.caption("✅ ตรวจพบภาพวาดลายมือ พร้อมประมวลผลทันที")
-
-    # If an example was selected from below
+    # If an example was clicked from below
     if st.session_state.current_image is not None and active_image is None:
         active_image = st.session_state.current_image
+        st.image(active_image, caption="ภาพจาก Examples", use_container_width=True)
 
 
 # ----------------- RIGHT: OUTPUT PANEL -----------------
 with col_output:
-    st.markdown('<div class="card-title">Prediction (ผลการทำนาย 5 อันดับแรก)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-title">2. ผลการทำนาย (Prediction & Preprocessing)</div>', unsafe_allow_html=True)
     
     if active_image is not None:
         try:
@@ -209,7 +214,7 @@ with col_output:
                 pct = prob * 100.0
                 color = bar_colors[idx] if idx < len(bar_colors) else "#9ca3af"
                 weight = "700" if idx == 0 else "500"
-                font_size = "1.05rem" if idx == 0 else "0.9rem"
+                font_size = "1.08rem" if idx == 0 else "0.9rem"
                 
                 bar_html = f"""
                 <div class="gradio-label-row">
@@ -238,9 +243,9 @@ with col_output:
     else:
         st.markdown(
             """
-            <div style="border: 2px dashed #e5e7eb; border-radius: 8px; padding: 4rem 1rem; text-align: center; color: #9ca3af;">
-                รอการอัปโหลดหรือวาดภาพตัวอักษรทางด้านซ้าย...<br>
-                <span style="font-size: 0.85rem;">(Upload an image or draw a character on the canvas)</span>
+            <div style="border: 2px dashed #d1d5db; border-radius: 10px; padding: 4.5rem 1rem; text-align: center; color: #9ca3af; background: #fafafa;">
+                ✍️ <b>รอยวาดหรืออัปโหลดรูปภาพทางด้านซ้าย...</b><br>
+                <span style="font-size: 0.85rem;">(Draw a character on the canvas or upload an image to see prediction)</span>
             </div>
             """,
             unsafe_allow_html=True,
@@ -269,5 +274,5 @@ if example_files:
 # Footer
 st.write("---")
 st.caption(
-    "Data Science Capstone Project | Model: Deep CNN (22,000 samples, 99.14% accuracy) | Dual Mode: Upload & Live Canvas"
+    "Data Science Capstone Project | Model: Deep CNN (22,000 samples, 99.14% accuracy) | Dual Mode: Live Canvas & Upload"
 )
