@@ -46,32 +46,32 @@ def predict_sketch_or_image(image):
 
 
 # ============================================================
-# Gradio Application with Dual Input: Upload & Live Canvas
+# Gradio Application with Dual Input (Formal & Academic)
 # ============================================================
 
 with gr.Blocks(title="Thai Character Classifier (ก - ฮ)", theme=gr.themes.Soft()) as app:
-    gr.Markdown("# 🇹🇭 Thai Character Classifier (ก - ฮ)")
+    gr.Markdown("# Thai Character Classification System")
     gr.Markdown(
-        "อัปโหลดรูปภาพพยัญชนะไทย หรือ **วาดเขียนด้วยลายมือสด ๆ บนกระดาน** "
-        "ระบบจะจำแนกตัวอักษร ก - ฮ ด้วยโมเดล Deep CNN (ความแม่นยำ 99.14% จาก 22,000 ตัวอย่าง)"
+        "ระบบจำแนกพยัญชนะภาษาไทย 44 รูป (ก - ฮ) ด้วยโครงข่ายประสาทเทียมสังวัตนาการ (Deep Convolutional Neural Network)\n"
+        "Data Science Capstone Project | ทดสอบได้ทั้งลายมือเขียนสดบนกระดานดิจิทัลและไฟล์ภาพ"
     )
 
     with gr.Row():
         with gr.Column(scale=1):
             with gr.Tabs():
-                with gr.TabItem("📁 อัปโหลดรูปภาพ (Upload Image)"):
+                with gr.TabItem("วาดเขียนด้วยลายมือ (Drawing Canvas)"):
+                    input_sketch = gr.Sketchpad(
+                        type="numpy",
+                        label="วาดพยัญชนะไทยด้วยลายมือ (Draw Thai Character)"
+                    )
+                    sketch_btn = gr.Button("วิเคราะห์ภาพที่วาด (Predict Drawing)", variant="primary", size="lg")
+
+                with gr.TabItem("อัปโหลดรูปภาพ (Upload Image)"):
                     input_upload = gr.Image(
                         type="numpy",
                         label="อัปโหลดรูปภาพพยัญชนะไทย (Upload Image)"
                     )
-                    upload_btn = gr.Button("🔍 วิเคราะห์ภาพที่อัปโหลด (Predict)", variant="primary", size="lg")
-
-                with gr.TabItem("✏️ วาดเขียนด้วยลายมือ (Draw Canvas)"):
-                    input_sketch = gr.Sketchpad(
-                        type="numpy",
-                        label="ใช้เมาส์หรือนิ้วมือวาดพยัญชนะไทย (Draw Thai Character)"
-                    )
-                    sketch_btn = gr.Button("🔍 วิเคราะห์ภาพที่วาด (Predict Drawing)", variant="primary", size="lg")
+                    upload_btn = gr.Button("วิเคราะห์ภาพที่อัปโหลด (Predict)", variant="primary", size="lg")
 
         with gr.Column(scale=1):
             output_label = gr.Label(
@@ -99,7 +99,7 @@ with gr.Blocks(title="Thai Character Classifier (ก - ฮ)", theme=gr.themes.So
         gr.Examples(
             examples=examples,
             inputs=input_upload,
-            label="Examples (ตัวอย่างภาพสำหรับคลิกทดสอบทันที)"
+            label="ชุดภาพตัวอย่างสำหรับทดสอบ (Sample Test Images)"
         )
 
 
