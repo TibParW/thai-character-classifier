@@ -1,45 +1,26 @@
 from pathlib import Path
 
 import gradio as gr
+import numpy as np
 import torch
 
 from cnn_model import ThaiCNNPredictor
+from preprocessing import _to_pil_image
 
 
 # ============================================================
-# Paths
+# Paths & Model
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
-
-MODEL_PATH = (
-    BASE_DIR
-    / "models"
-    / "thai_cnn_classifier.pt"
-)
-
+MODEL_PATH = BASE_DIR / "models" / "thai_cnn_classifier.pt"
 TEST_IMAGES_DIR = BASE_DIR / "test_images"
 
-
-# ============================================================
-# Load model
-# ============================================================
-
 if not MODEL_PATH.exists():
-    raise FileNotFoundError(
-        "\n"
-        "Model file not found:\n"
-        f"{MODEL_PATH}\n\n"
-        "Run train_cnn.py first."
-    )
+    raise FileNotFoundError(f"Model file not found: {MODEL_PATH}")
 
-print(
-    f"Loading model from:\n{MODEL_PATH}"
-)
-
-predictor = ThaiCNNPredictor(
-    model_path=MODEL_PATH
-)
+print(f"Loading model from:\n{MODEL_PATH}")
+predictor = ThaiCNNPredictor(model_path=MODEL_PATH)
 
 
 # ============================================================
@@ -53,47 +34,74 @@ if TEST_IMAGES_DIR.exists():
     )[:8]
 
 
+def predict_sketch_or_image(image):
+    if image is None:
+        raise gr.Error("กรุณาวาดตัวอักษรไทยก่อนกดวิเคราะห์")
+    if isinstance(image, dict):
+        comp = image.get("composite", image.get("background", None))
+        if comp is None:
+            raise gr.Error("กรุณาวาดตัวอักษรไทยก่อนกดวิเคราะห์")
+        image = comp
+    return predictor.predict(image)
+
+
 # ============================================================
-# Gradio application
+# Gradio Application with Dual Input: Upload & Live Canvas
 # ============================================================
 
-app = gr.Interface(
-    fn=predictor.predict,
+with gr.Blocks(title="Thai Character Classifier (ก - ฮ)", theme=gr.themes.Soft()) as app:
+    gr.Markdown("# 🇹🇭 Thai Character Classifier (ก - ฮ)")
+    gr.Markdown(
+        "อัปโหลดรูปภาพพยัญชนะไทย หรือ **วาดเขียนด้วยลายมือสด ๆ บนกระดาน** "
+        "ระบบจะจำแนกตัวอักษร ก - ฮ ด้วยโมเดล Deep CNN (ความแม่นยำ 99.14% จาก 22,000 ตัวอย่าง)"
+    )
 
-    inputs=gr.Image(
-        type="numpy",
-        label="Upload a Thai character image (อัปโหลดรูปพยัญชนะไทย)"
-    ),
+    with gr.Row():
+        with gr.Column(scale=1):
+            with gr.Tabs():
+                with gr.TabItem("📁 อัปโหลดรูปภาพ (Upload Image)"):
+                    input_upload = gr.Image(
+                        type="numpy",
+                        label="อัปโหลดรูปภาพพยัญชนะไทย (Upload Image)"
+                    )
+                    upload_btn = gr.Button("🔍 วิเคราะห์ภาพที่อัปโหลด (Predict)", variant="primary", size="lg")
 
-    outputs=[
-        gr.Label(
-            num_top_classes=5,
-            label="Prediction (ผลการทำนาย 5 อันดับแรก)"
-        ),
+                with gr.TabItem("✏️ วาดเขียนด้วยลายมือ (Draw Canvas)"):
+                    input_sketch = gr.Sketchpad(
+                        type="numpy",
+                        label="ใช้เมาส์หรือนิ้วมือวาดพยัญชนะไทย (Draw Thai Character)"
+                    )
+                    sketch_btn = gr.Button("🔍 วิเคราะห์ภาพที่วาด (Predict Drawing)", variant="primary", size="lg")
 
-        gr.Image(
-            type="numpy",
-            label="Processed 28 × 28 image (ภาพหลังทำ Preprocessing)"
+        with gr.Column(scale=1):
+            output_label = gr.Label(
+                num_top_classes=5,
+                label="Prediction (ผลการทำนาย 5 อันดับแรก)"
+            )
+            output_preview = gr.Image(
+                type="numpy",
+                label="Processed 28 × 28 image (ภาพหลังทำ Preprocessing)"
+            )
+
+    upload_btn.click(
+        fn=predictor.predict,
+        inputs=input_upload,
+        outputs=[output_label, output_preview]
+    )
+
+    sketch_btn.click(
+        fn=predict_sketch_or_image,
+        inputs=input_sketch,
+        outputs=[output_label, output_preview]
+    )
+
+    if examples:
+        gr.Examples(
+            examples=examples,
+            inputs=input_upload,
+            label="Examples (ตัวอย่างภาพสำหรับคลิกทดสอบทันที)"
         )
-    ],
 
-    title=(
-        "Thai Character Classifier (ก - ฮ)"
-    ),
-
-    description=(
-        "Upload an image containing one Thai consonant from ก to ฮ. "
-        "The application preprocesses the image and uses a trained Deep CNN model "
-        "(99.14% accuracy on 22,000 samples) to classify the character."
-    ),
-
-    examples=examples if examples else None,
-)
-
-
-# ============================================================
-# Start application
-# ============================================================
 
 if __name__ == "__main__":
     app.launch(share=False)
