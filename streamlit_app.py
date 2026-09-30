@@ -193,15 +193,25 @@ st.markdown(
 
 
 # ============================================================
-# Mode Selection: Upload as Primary (Default), Draw as Secondary
+# State Handling & Instant Mode Switch Management
 # ============================================================
 
 MODE_UPLOAD = "อัปโหลดไฟล์ภาพ"
 MODE_DRAW = "วาดเขียนลายมือ"
 
-if "active_mode" not in st.session_state:
-    st.session_state.active_mode = MODE_UPLOAD
+if "mode_counter" not in st.session_state:
+    st.session_state.mode_counter = 0
 if "sample_image" not in st.session_state:
+    st.session_state.sample_image = None
+
+
+def on_mode_switch():
+    """
+    Executed synchronously when user clicks between Upload and Draw.
+    Increments mode_counter to give input widgets a clean slate instantly,
+    guaranteeing no stale images or lingering predictions.
+    """
+    st.session_state.mode_counter += 1
     st.session_state.sample_image = None
 
 
@@ -225,23 +235,18 @@ col_input, col_output = st.columns([1, 1], gap="large")
 with col_input:
     st.markdown('<div class="section-header">วิธีการนำเข้าข้อมูล (Input Method)</div>', unsafe_allow_html=True)
 
-    # Segmented Radio Bar: Upload is Primary (Left), Draw is Secondary (Right)
+    # Segmented Radio Bar with callback for instantaneous reset
     selected_mode = st.radio(
         "โหมดการทำงาน",
         options=[MODE_UPLOAD, MODE_DRAW],
-        index=0 if st.session_state.active_mode == MODE_UPLOAD else 1,
+        key="selected_mode_key",
+        on_change=on_mode_switch,
         horizontal=True,
         label_visibility="collapsed",
-        key="mode_radio",
     )
 
-    # If user switched mode, immediately wipe out previous sample and reset active state
-    if selected_mode != st.session_state.active_mode:
-        st.session_state.active_mode = selected_mode
-        st.session_state.sample_image = None
-        st.rerun()
-
     active_image = None
+    current_key_suffix = f"_{st.session_state.mode_counter}"
 
     # MODE 1: FILE UPLOAD (PRIMARY / DEFAULT)
     if selected_mode == MODE_UPLOAD:
@@ -250,7 +255,7 @@ with col_input:
             "Upload Image File",
             type=["jpg", "jpeg", "png"],
             label_visibility="collapsed",
-            key="upload_file_widget",
+            key=f"upload_widget{current_key_suffix}",
         )
         if uploaded_file is not None:
             active_image = Image.open(uploaded_file)
@@ -275,7 +280,7 @@ with col_input:
             height=280,
             width=280,
             drawing_mode="freedraw",
-            key="draw_canvas_widget",
+            key=f"canvas_widget{current_key_suffix}",
         )
 
         if canvas_result.image_data is not None:
