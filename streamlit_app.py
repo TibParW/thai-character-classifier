@@ -2,6 +2,7 @@ from pathlib import Path
 from PIL import Image
 import numpy as np
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_drawable_canvas import st_canvas
 
 from cnn_model import ThaiCNNPredictor
@@ -18,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom CSS: Clean, full-width, balanced two-column layout
+# Custom CSS: Clean, full-width, zero-flash on mode transitions
 st.markdown(
     """
     <style>
@@ -97,6 +98,16 @@ st.markdown(
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
     }
 
+    /* Zero-Flash: Completely vanish any stale elements when switching */
+    div[data-stale="true"] .prediction-card,
+    div[data-stale="true"] .prep-box,
+    div[data-stale="true"] [data-testid="stImage"],
+    [data-testid="stElementContainer"][data-stale="true"] .prediction-card {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+
     /* Prediction Card */
     .prediction-card {
         background-color: #ffffff;
@@ -164,6 +175,39 @@ st.markdown(
     </style>
     """,
     unsafe_allow_html=True,
+)
+
+# Client-side instant vanish script: Fires on mousedown (0ms latency)
+components.html(
+    """
+    <script>
+    (function() {
+        function attachMousedownVanish() {
+            try {
+                const doc = window.parent.document;
+                if (!doc) return;
+                const labels = doc.querySelectorAll('div[data-testid="stRadio"] label');
+                labels.forEach(lbl => {
+                    if (!lbl.dataset.listenerAttached) {
+                        lbl.dataset.listenerAttached = "true";
+                        lbl.addEventListener('mousedown', function() {
+                            // Instantly hide prediction elements client-side before websocket fires
+                            const targets = doc.querySelectorAll('.prediction-card, .prep-box');
+                            targets.forEach(el => {
+                                el.style.display = 'none';
+                                el.style.visibility = 'hidden';
+                            });
+                        });
+                    }
+                });
+            } catch(e) {}
+        }
+        attachMousedownVanish();
+        setInterval(attachMousedownVanish, 400);
+    })();
+    </script>
+    """,
+    height=0,
 )
 
 
