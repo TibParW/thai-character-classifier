@@ -18,20 +18,20 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom CSS: Clean, responsive, formal, perfect segmented button fit
+# Custom CSS: Clean, full-width, balanced two-column layout
 st.markdown(
     """
     <style>
     /* Global Container */
     .block-container {
-        max-width: 1040px;
+        max-width: 1140px;
         padding-top: 1.5rem;
         padding-bottom: 3.5rem;
     }
     
     /* Typography */
     .app-title {
-        font-size: 2.1rem;
+        font-size: 2.15rem;
         font-weight: 700;
         text-align: center;
         margin-bottom: 0.35rem;
@@ -102,9 +102,11 @@ st.markdown(
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
-        padding: 1.2rem;
+        padding: 1.25rem;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
         margin-bottom: 1.25rem;
+        width: 100%;
+        box-sizing: border-box;
     }
     .prob-row {
         margin-bottom: 0.65rem;
@@ -131,22 +133,33 @@ st.markdown(
         transition: width 0.3s ease;
     }
 
-    /* Canvas Frame */
-    .canvas-container {
-        display: flex;
-        justify-content: center;
-        margin: 0.5rem 0;
-    }
-    
-    /* Placeholder Box */
+    /* Full-Height Placeholder Box */
     .placeholder-box {
-        border: 1px dashed #cbd5e1;
+        border: 2px dashed #cbd5e1;
         border-radius: 8px;
-        padding: 4.5rem 1.5rem;
-        text-align: center;
+        min-height: 420px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
         color: #64748b;
         background-color: #f8fafc;
-        font-size: 0.92rem;
+        font-size: 0.95rem;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+    }
+    
+    /* Preprocessing Info Box */
+    .prep-box {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 0.85rem;
+        font-size: 0.82rem;
+        color: #475569;
+        line-height: 1.5;
     }
     </style>
     """,
@@ -173,22 +186,21 @@ st.markdown('<div class="app-title">Thai Character Classification System</div>',
 st.markdown(
     '<div class="app-subtitle">'
     'ระบบจำแนกพยัญชนะภาษาไทย 44 รูป (ก - ฮ) ด้วยโครงข่ายประสาทเทียมสังวัตนาการ (Deep Convolutional Neural Network)<br>'
-    'Data Science Capstone Project | รองรับทั้งการวาดเขียนด้วยลายมือและไฟล์ภาพ'
+    'Data Science Capstone Project | รองรับทั้งไฟล์ภาพและลายมือเขียนดิจิทัล'
     '</div>',
     unsafe_allow_html=True,
 )
 
 
 # ============================================================
-# Mode Selection (Compact, Fit, Non-overflowing)
+# Mode Selection: Upload as Primary (Default), Draw as Secondary
 # ============================================================
 
-# Short labels that never overflow inside columns
-MODE_DRAW = "วาดเขียนลายมือ"
 MODE_UPLOAD = "อัปโหลดไฟล์ภาพ"
+MODE_DRAW = "วาดเขียนลายมือ"
 
 if "active_mode" not in st.session_state:
-    st.session_state.active_mode = MODE_DRAW
+    st.session_state.active_mode = MODE_UPLOAD
 if "sample_image" not in st.session_state:
     st.session_state.sample_image = None
 
@@ -204,7 +216,7 @@ if TEST_IMAGES_DIR.exists():
 
 
 # ============================================================
-# 2-Column Interface
+# 2-Column Interface (Balanced Width: Left Input / Right Output)
 # ============================================================
 
 col_input, col_output = st.columns([1, 1], gap="large")
@@ -213,11 +225,11 @@ col_input, col_output = st.columns([1, 1], gap="large")
 with col_input:
     st.markdown('<div class="section-header">วิธีการนำเข้าข้อมูล (Input Method)</div>', unsafe_allow_html=True)
 
-    # Segmented Radio Bar (Clean, 50/50, No overflow)
+    # Segmented Radio Bar: Upload is Primary (Left), Draw is Secondary (Right)
     selected_mode = st.radio(
         "โหมดการทำงาน",
-        options=[MODE_DRAW, MODE_UPLOAD],
-        index=0 if st.session_state.active_mode == MODE_DRAW else 1,
+        options=[MODE_UPLOAD, MODE_DRAW],
+        index=0 if st.session_state.active_mode == MODE_UPLOAD else 1,
         horizontal=True,
         label_visibility="collapsed",
         key="mode_radio",
@@ -231,8 +243,21 @@ with col_input:
 
     active_image = None
 
-    # MODE 1: DRAWING CANVAS
-    if selected_mode == MODE_DRAW:
+    # MODE 1: FILE UPLOAD (PRIMARY / DEFAULT)
+    if selected_mode == MODE_UPLOAD:
+        st.caption("เลือกไฟล์ภาพพยัญชนะไทยจากเครื่องคอมพิวเตอร์:")
+        uploaded_file = st.file_uploader(
+            "Upload Image File",
+            type=["jpg", "jpeg", "png"],
+            label_visibility="collapsed",
+            key="upload_file_widget",
+        )
+        if uploaded_file is not None:
+            active_image = Image.open(uploaded_file)
+            st.image(active_image, caption=f"ไฟล์ภาพ: {uploaded_file.name}", use_container_width=True)
+
+    # MODE 2: DRAWING CANVAS (SECONDARY)
+    else:
         st.caption("วาดพยัญชนะไทยลงในกรอบสี่เหลี่ยมด้านล่าง:")
 
         col_slider, col_hint = st.columns([2, 1])
@@ -255,23 +280,9 @@ with col_input:
 
         if canvas_result.image_data is not None:
             rgb = canvas_result.image_data[:, :, :3]
-            # Detect whether any pixel was drawn
             if np.any(rgb < 200):
                 active_image = Image.fromarray(rgb.astype(np.uint8))
                 st.caption("สถานะ: ตรวจพบภาพวาด กำลังประมวลผลการทำนาย")
-
-    # MODE 2: FILE UPLOAD
-    else:
-        st.caption("เลือกไฟล์ภาพพยัญชนะไทยจากเครื่องคอมพิวเตอร์:")
-        uploaded_file = st.file_uploader(
-            "Upload Image File",
-            type=["jpg", "jpeg", "png"],
-            label_visibility="collapsed",
-            key="upload_file_widget",
-        )
-        if uploaded_file is not None:
-            active_image = Image.open(uploaded_file)
-            st.image(active_image, caption=f"ไฟล์ภาพ: {uploaded_file.name}", use_container_width=True)
 
     # If user selected an example image from the gallery
     if st.session_state.sample_image is not None and active_image is None:
@@ -282,7 +293,7 @@ with col_input:
             st.rerun()
 
 
-# ----------------- RIGHT: OUTPUT PANEL -----------------
+# ----------------- RIGHT: OUTPUT PANEL (FULL-HEIGHT & FULL-WIDTH) -----------------
 with col_output:
     st.markdown('<div class="section-header">ผลการวิเคราะห์และจำแนก (Classification Results)</div>', unsafe_allow_html=True)
 
@@ -294,7 +305,7 @@ with col_output:
             # Formal academic slate/blue tones
             bar_colors = ["#1e40af", "#3b82f6", "#64748b", "#94a3b8", "#cbd5e1"]
 
-            # Prediction Card
+            # Prediction Card (Full Width)
             st.markdown('<div class="prediction-card">', unsafe_allow_html=True)
             for idx, (char_label, prob) in enumerate(top_5):
                 pct = prob * 100.0
@@ -316,22 +327,43 @@ with col_output:
                 st.markdown(row_html, unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Processed 28x28 Image
+            # Processed 28x28 Image & Pipeline details
             st.markdown('<div class="section-header" style="margin-top: 1.4rem;">ภาพหลังกระบวนการเตรียมข้อมูล (Processed 28 × 28 Image)</div>', unsafe_allow_html=True)
-            st.image(
-                preview,
-                caption="ภาพมาตรฐานขนาด 28 × 28 พิกเซล (Grayscale, Centered & Cropped)",
-                width=150,
-            )
+            
+            col_prev_img, col_prev_info = st.columns([1, 2], gap="medium")
+            with col_prev_img:
+                st.image(
+                    preview,
+                    caption="ขนาด 28 × 28 พิกเซล",
+                    use_container_width=True,
+                )
+            with col_prev_info:
+                st.markdown(
+                    """
+                    <div class="prep-box">
+                        <b>กระบวนการเตรียมข้อมูล (Image Pipeline):</b><br>
+                        1. แปลงระดับสีเทา (Grayscale 0-255)<br>
+                        2. ตรวจจับขอบเขตและตัดขอบ (Auto-crop)<br>
+                        3. จัดตำแหน่งกึ่งกลางภาพ (Centering + 4px Padding)<br>
+                        4. ปรับขนาดมาตรฐานเป็น 28 × 28 พิกเซล
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
         except Exception as e:
             st.error(f"เกิดข้อผิดพลาดในการประมวลผล: {e}")
     else:
+        # Full-height placeholder matching left side
         st.markdown(
             """
             <div class="placeholder-box">
-                <b>รอข้อมูลนำเข้า</b><br>
-                กรุณาวาดตัวอักษรลงบนกระดาน หรืออัปโหลดไฟล์ภาพทางฝั่งซ้าย
+                <div style="font-size: 1.1rem; font-weight: 600; color: #334155; margin-bottom: 0.5rem;">
+                    รอข้อมูลนำเข้าเพื่อวิเคราะห์ผล
+                </div>
+                <div style="color: #64748b; font-size: 0.9rem; max-width: 320px; line-height: 1.6;">
+                    กรุณาเลือกอัปโหลดไฟล์ภาพ หรือสลับไปยังโหมดวาดเขียนลายมือทางฝั่งซ้าย เพื่อดูผลการจำแนกพยัญชนะ
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
