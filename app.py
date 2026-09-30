@@ -52,8 +52,7 @@ def predict_sketch_or_image(image):
 with gr.Blocks(title="Thai Character Classifier (ก - ฮ)", theme=gr.themes.Soft()) as app:
     gr.Markdown("# Thai Character Classification System")
     gr.Markdown(
-        "ระบบจำแนกพยัญชนะภาษาไทย 44 รูป (ก - ฮ) ด้วยโครงข่ายประสาทเทียมสังวัตนาการ (Deep Convolutional Neural Network)\n"
-        "Data Science Capstone Project | รองรับทั้งไฟล์ภาพและลายมือเขียนดิจิทัล"
+        "ระบบจำแนกพยัญชนะภาษาไทย 44 รูป (ก - ฮ) ด้วยโครงข่ายประสาทเทียมสังวัตนาการ (Deep Convolutional Neural Network)"
     )
 
     with gr.Row():
@@ -82,7 +81,8 @@ with gr.Blocks(title="Thai Character Classifier (ก - ฮ)", theme=gr.themes.So
             )
             output_preview = gr.Image(
                 type="numpy",
-                label="Processed 28 × 28 image (ภาพหลังทำ Preprocessing)"
+                label="Processed 28 × 28 image (ภาพหลังทำ Preprocessing)",
+                height=280,
             )
 
     upload_btn.click(

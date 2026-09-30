@@ -1,4 +1,5 @@
 import numpy as np
+from PIL import Image
 from preprocessing import preprocess_image
 from labels import LABEL_TO_DISPLAY
 
@@ -49,8 +50,9 @@ class ThaiCharacterPredictor:
             display_name = LABEL_TO_DISPLAY.get(raw_label, str(raw_label))
             scores[display_name] = float(prob)
 
-        # 5. Preview image (0-255 uint8)
-        preview = (processed * 255.0).astype(np.uint8)
+        # 5. Preview image (enlarged to 280x280 with NEAREST for clear visible pixels)
+        preview_28 = (processed * 255.0).astype(np.uint8)
+        preview = np.array(Image.fromarray(preview_28).resize((280, 280), Image.Resampling.NEAREST))
 
         return scores, preview
 

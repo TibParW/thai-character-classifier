@@ -229,8 +229,7 @@ predictor = load_predictor()
 st.markdown('<div class="app-title">Thai Character Classification System</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="app-subtitle">'
-    'ระบบจำแนกพยัญชนะภาษาไทย 44 รูป (ก - ฮ) ด้วยโครงข่ายประสาทเทียมสังวัตนาการ (Deep Convolutional Neural Network)<br>'
-    'Data Science Capstone Project | รองรับทั้งไฟล์ภาพและลายมือเขียนดิจิทัล'
+    'ระบบจำแนกพยัญชนะภาษาไทย 44 รูป (ก - ฮ) ด้วยโครงข่ายประสาทเทียมสังวัตนาการ (Deep Convolutional Neural Network)'
     '</div>',
     unsafe_allow_html=True,
 )

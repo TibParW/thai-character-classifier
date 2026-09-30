@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from pathlib import Path
+from PIL import Image
 
 from preprocessing import preprocess_image
 from labels import LABEL_TO_DISPLAY
@@ -85,7 +86,8 @@ class ThaiCNNPredictor:
             display = LABEL_TO_DISPLAY.get(cls_name, cls_name)
             scores[display] = float(prob)
 
-        # 5. Preview image (0-255 uint8)
-        preview = (arr * 255.0).astype(np.uint8)
+        # 5. Preview image (enlarged to 280x280 with NEAREST for clear visible pixels)
+        preview_28 = (arr * 255.0).astype(np.uint8)
+        preview = np.array(Image.fromarray(preview_28).resize((280, 280), Image.Resampling.NEAREST))
 
         return scores, preview
